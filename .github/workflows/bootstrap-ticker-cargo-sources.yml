@@ -1,0 +1,35 @@
+name: Bootstrap Ticker cargo sources
+
+on:
+  push:
+    branches: [add-ticker]
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install generator dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip
+          python3 -m pip install --break-system-packages toml tomlkit aiohttp
+
+      - name: Fetch Ticker lockfile and generate cargo sources
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/drwesleyadv/Ticker/d69d73c3fe877e2a9d1a322400629ccee7cef101/Cargo.lock -o /tmp/Ticker-Cargo.lock
+          curl -fsSL https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py -o /tmp/flatpak-cargo-generator.py
+          python3 /tmp/flatpak-cargo-generator.py /tmp/Ticker-Cargo.lock -o app/com.github.drwesleyadv.Ticker/cargo-sources.json
+
+      - name: Commit generated source list
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/com.github.drwesleyadv.Ticker/cargo-sources.json
+          git diff --cached --quiet || git commit -m "Add Ticker cargo sources"
+          git push
